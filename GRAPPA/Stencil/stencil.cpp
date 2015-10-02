@@ -151,8 +151,8 @@ int main(int argc, char * argv[]) {
       std::cout<<"ERROR: iterations must be >= 1 :"<<iterations<<std::endl;
     exit(1);
   }
-  int n       = atoi(argv[2]);
-  long nsquare = n * n;
+  int n           = atoi(argv[2]);
+  int64_t nsquare = (int64_t) n * n;
   if (nsquare < Grappa::cores()){
     if (my_ID == root)
       std::cout<<"ERROR: grid size "<<nsquare<<" must be at least # cores "<<
@@ -260,13 +260,13 @@ int main(int argc, char * argv[]) {
         std::cout<<"ERROR: core "<<my_ID<<" has no work to do"<<std::endl;
         exit(1);
       }
-      long total_length_in = (width+2*RADIUS)*(height+2*RADIUS);
+      int64_t total_length_in = (width+2*RADIUS)*(height+2*RADIUS);
       if (total_length_in/(height+2*RADIUS) != (width+2*RADIUS)) {
         std::cout<<"ERROR: Space for "<<width+2*RADIUS<<" x "<<height+2*RADIUS<<
           " input array cannot be represented"<<std::endl;
         exit(1);
       }
-      long total_length_out = width*height;
+      int64_t total_length_out = width*height;
       in  = Grappa::locale_new_array<DTYPE>(total_length_in);
       out = Grappa::locale_new_array<DTYPE>(total_length_out);
       if (!in || !out) {
