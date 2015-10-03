@@ -194,9 +194,9 @@ int main(int argc, char * argv[]) {
 	exit(1);
       }
 
-      int tiling = (Tile_order > 0) && (Tile_order < order);
+      int64_t tiling = (Tile_order > 0) && (Tile_order < order);
       if (!tiling) Tile_order = order;
-      int bytes = 2.0 * sizeof(double) * order * order;
+      int64_t bytes = 2.0 * sizeof(double) * order * order;
 
       Grappa::on_all_cores( [=] {
 	  my_ID = Grappa::mycore();
@@ -332,7 +332,8 @@ int main(int argc, char * argv[]) {
 
 	      // ensures all async writes complete before moving to next phase
 	      Grappa::impl::local_ce.wait();
-	    
+
+        barrier();
 	    } // end of phase loop
 	  } // done with iterations
 	});
