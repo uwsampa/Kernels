@@ -204,8 +204,8 @@ int main(int argc, char * argv[]) {
     symmetric int iend;
     symmetric int jstart;
     symmetric int jend;
-    symmetric int width;
-    symmetric int height;
+    symmetric int64_t width;
+    symmetric int64_t height;
  
     symmetric FullEmpty<DTYPE> * left_halo;
     symmetric FullEmpty<DTYPE> * right_halo;
@@ -317,7 +317,7 @@ int main(int argc, char * argv[]) {
     } );
   
     
-            
+
 
     Grappa::finish( [n,Num_procsx,Num_procsy, iterations] {
     Grappa::on_all_cores( [n,Num_procsx,Num_procsy, iterations] {

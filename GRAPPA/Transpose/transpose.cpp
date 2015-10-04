@@ -179,7 +179,7 @@ int main(int argc, char * argv[]) {
 
   Grappa::run( [iterations, order, Num_procs, argc, argv] {
       symmetric int my_ID;
-      symmetric int Block_order,Block_size,Colblock_size,colstart;
+      symmetric int64_t Block_order,Block_size,Colblock_size,colstart;
       symmetric double * A_p, * B_p;
       symmetric double * Work_out_p;
       symmetric double abserr, epsilon = 1.e-8;
@@ -200,7 +200,7 @@ int main(int argc, char * argv[]) {
 
       Grappa::on_all_cores( [=] {
 	  my_ID = Grappa::mycore();
-	  int i, j, istart; // dummies 
+	  int64_t i, j, istart; // dummies 
 
 /*********************************************************************
 ** The matrix is broken up into column blocks that are mapped one to a 
@@ -258,7 +258,7 @@ int main(int argc, char * argv[]) {
       Grappa::finish( [=] {
       Grappa::on_all_cores( [=] {
 	  int send_to, recv_from;
-	  int i, j, it, jt, istart, iter, phase; // dummies 
+	  int64_t i, j, it, jt, istart, iter, phase; // dummies 
 	  double val;
 	  int target;
 
@@ -346,8 +346,8 @@ int main(int argc, char * argv[]) {
       GlobalAddress<AbsErr> ae = Grappa::symmetric_global_alloc<AbsErr>();
       // check for errors
       Grappa::on_all_cores( [=] {
-	  int i,j;
-	  int istart = 0;
+	  int64_t i,j;
+	  int64_t istart = 0;
 	  ae->abserr = 0;
 	  for (j=0;j<Block_order;j++) for (i=0;i<order;i++) {
 	      ae->abserr += ABS(B(i,j) - (double)(order*i + j+colstart));
