@@ -206,8 +206,12 @@ int main(int argc, char * argv[]) {
 ** Create the column block of the test matrix, the row block of the 
 ** transposed matrix, and workspace (workspace only if #procs>1)
 *********************************************************************/
-	  A_p = Grappa::locale_new_array<double>(Colblock_size);
-	  B_p = Grappa::locale_new_array<double>(Colblock_size);
+	  
+	  static double A[1<<24];
+	  A_p = &A[0];
+	  //B_p = Grappa::locale_new_array<double>(Colblock_size);
+	  static double B[1<<24];
+	  B_p = &B[0];
 	  if (!A_p || !B_p) {
 	    std::cout << "Core " << my_ID << " could not allocate space for "
 		      << "matrices" << std::endl;
@@ -248,7 +252,7 @@ int main(int argc, char * argv[]) {
 	  int send_to, recv_from;
 	  int64_t i, j, it, jt, istart, iter, phase; // dummies 
 	  double val;
-	  int target;
+	  GlobalAddress<double> target;
 
 	  for ( iter = 0; iter <= iterations; iter++) {
 	    
@@ -289,8 +293,8 @@ int main(int argc, char * argv[]) {
 		  }
 	      }
 	      else {
-		for (i=0; i<Block_order; i+=Tile_order) 
-		  for (j=0; j<Block_order; j+=Tile_order) 
+		for (i=0; i<Block_order; i+=Tile_order)
+		  for (j=0; j<Block_order; j+=Tile_order)
 		    for (it=i; it<MIN(Block_order,i+Tile_order); it++)
 		      for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
 			Work_out(jt,it) = A(it,jt);
@@ -303,10 +307,10 @@ int main(int argc, char * argv[]) {
 	      if (!tiling) {
 		for (j=0; i<Block_order; i++) 
 		  for (i=0; j<Block_order; j++) {
-		    target = i+istart+(order*j);
+		    target = make_global(&B_p[(i+istart)+order*(j)], send_to);
 		    val = Work_out(i,j);
-		    Grappa::delegate::call<async>(send_to, [val,target] {
-			B_p[target] += val;
+		    Grappa::delegate::call<async>(target, [val] (double& d) {
+			d += val;
 		      });
 		  }
 	      }
@@ -315,10 +319,10 @@ int main(int argc, char * argv[]) {
 		  for (i=0; i<Block_order; i+=Tile_order) 
 		    for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++)
 		      for (it=i; it<MIN(Block_order,i+Tile_order); it++) {
-			target = it+istart+(order*jt);
+			target = make_global(&B_p[(it+istart)+order*(jt)], send_to);
 			val = Work_out(it,jt);
-			Grappa::delegate::call<async>(send_to, [val,target] {
-			    B_p[target] += val;
+			Grappa::delegate::call<async>(target, [val] (double& d) {
+			    d += val;
 			  });
 		      }
 	      }	       
@@ -354,6 +358,19 @@ int main(int argc, char * argv[]) {
       abserr_tot = Grappa::reduce<double, collective_sum<double>>(&ae->abserr);
       trans_time = Grappa::reduce<double,collective_max<double>>( &timer->total );
       if (abserr_tot < epsilon) {
+
+
+
+
+
+
+
+
+
+
+
+
+
 	std::cout << "Solution validates" << std::endl;
 	avgtime = trans_time/(double)iterations;
 	std::cout << "Rate (MB/s): " << 1.0E-06*bytes/avgtime

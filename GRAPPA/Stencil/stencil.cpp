@@ -280,11 +280,25 @@ int main(int argc, char * argv[]) {
           IN(i,j)  = COEFX*i+COEFY*j;
           OUT(i,j) = (DTYPE)0.0;
       }
+
+      /*
       // allocate communication buffers for halo values                         
       top_halo    = Grappa::locale_new_array<Grappa::FullEmpty<DTYPE>>(RADIUS*width);
       bottom_halo = Grappa::locale_new_array<Grappa::FullEmpty<DTYPE>>(RADIUS*width);
       right_halo  = Grappa::locale_new_array<Grappa::FullEmpty<DTYPE>>(RADIUS*height);
       left_halo   = Grappa::locale_new_array<Grappa::FullEmpty<DTYPE>>(RADIUS*height);
+      */
+
+      static FullEmpty<DTYPE> top_h[1<<20];
+      static FullEmpty<DTYPE> bottom_h[1<<20];
+      static FullEmpty<DTYPE> right_h[1<<20];
+      static FullEmpty<DTYPE> left_h[1<<20];
+
+      top_halo = &top_h[0];
+      bottom_halo = &bottom_h[0];
+      right_halo = &right_h[0];
+      left_halo = &left_h[0];
+
       if (!top_halo || !bottom_halo || !right_halo || !left_halo) {
         std::cout<<"ERROR: Rank "<<my_ID<<" could not allocate communication buffers"<<std::endl;
         exit(1);
@@ -321,6 +335,8 @@ int main(int argc, char * argv[]) {
 
 	for (int iter = 0; iter<=iterations; iter++){
 	  int i, j, ii, jj, kk;
+	  GlobalAddress<FullEmpty<DTYPE>> target;
+	  DTYPE val;
 
 	  if (iter == 1) start = Grappa::walltime();
 	  
@@ -331,36 +347,42 @@ int main(int argc, char * argv[]) {
 	    
 	      for (kk=0,j=jend-RADIUS+1; j<=jend; j++)
 	      for (i=istart; i<=iend; i++,kk++) {
-		auto val = IN(i,j);
-		Grappa::delegate::call<async>( top_nbr, [=] () {
-		    writeXF( &bottom_halo[kk], val);
+		target = make_global(&bottom_halo[kk], top_nbr);
+		val = IN(i,j);
+		Grappa::delegate::call<async>( target, [val] (FullEmpty<DTYPE>& fe) {
+		    fe.writeXF( val );
 		  } );
 	      }
 
 	  if (my_IDy > 0 && readFE( CTS_bottom))
 	    for (kk=0,j=jstart; j<=jstart+RADIUS-1; j++)
 	      for (i=istart; i<=iend; i++,kk++) {
-		auto val = IN(i,j);
-		Grappa::delegate::call<async>( bottom_nbr, [=] () {
-		    writeXF( &top_halo[kk], val);
+		target = make_global(&top_halo[kk], bottom_nbr);
+		val = IN(i,j);
+		Grappa::delegate::call<async>( target, [val] (FullEmpty<DTYPE>& fe) {
+		    fe.writeXF( val );
 		  } );
 	      }
+
 	  if (my_IDx < Num_procsx-1 && readFE( CTS_right))
 	    for (kk=0,j=jstart; j<=jend; j++)
 	      for (i=iend-RADIUS+1; i<=iend; i++,kk++) {
-		auto val = IN(i,j);
-		Grappa::delegate::call<async>( right_nbr, [=] () {
-		    writeXF( &left_halo[kk], val);
+		target = make_global(&left_halo[kk], right_nbr);
+		val = IN(i,j);
+		Grappa::delegate::call<async>( target, [val] (FullEmpty<DTYPE>& fe) {
+		    fe.writeXF( val );
 		  } );
 	      }
 	  if (my_IDx > 0 && readFE( CTS_left))
 	    for (kk=0,j=jstart; j<=jend; j++)
 	      for (i=istart; i<=istart+RADIUS-1; i++,kk++) {
-		auto val = IN(i,j);
-		Grappa::delegate::call<async>( left_nbr, [=] () {
-		    writeXF( &right_halo[kk], val);
+		target = make_global(&right_halo[kk], left_nbr);
+		val = IN(i,j);
+		Grappa::delegate::call<async>( target, [val] (FullEmpty<DTYPE>& fe) {
+		    fe.writeXF( val );
 		  } );
 	      }
+
 	  //Now put the halos into the regular array tile
 	  if (my_IDy < Num_procsy-1) {
 	    for (kk=0,j=jend+1; j<=jend+RADIUS; j++)
